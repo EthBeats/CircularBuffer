@@ -152,16 +152,29 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     {
         auto* channelData = buffer.getWritePointer (channel);
         
+        // check if main buffer copies without needing to wrap
+        if (delayBufferSize > bufferSize + writePosition)
+        {
+			// copy main buffer to delay buffer
+			delayBuffer.copyFromWithRamp(channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
+		}
+		else
+		{
+			// determine how much space is left at the end of delay buffer
+			auto numSamplesToEnd = delayBufferSize - writePosition;
+			
+			// copy that amount from main buffer to delay buffer
+			delayBuffer.copyFromWithRamp(channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
+			
+			// calculate remaining contents
+			auto numSamplesAtStart = bufferSize - numSamplesToEnd;
+			
+			// copy remaining contents to beginning of delay buffer
+			delayBuffer.copyFromWithRamp(channel, 0, channelData, numSamplesAtStart, 0.1f, 0.1f);
+		}
+        
     }
     
-    // check if main buffer copies without needing to wrap
-		// copy main buffer to delay buffer
-		
-		// determine how much space is left at the end of delay buffer
-		// copy that amount from main buffer to delay buffer
-		// calculate remaining contents
-		// copy remaining contents to beginning of delay buffer
-	
 	// update write position and keep within bounds (wrap around)
 	writePosition += bufferSize;
 	writePosition %= delayBufferSize;
