@@ -145,18 +145,19 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
+        
     }
+    
+    // check if main buffer copies without needing to wrap
+		// copy main buffer to delay buffer
+		
+		// determine how much space is left at the end of delay buffer
+		// copy that amount from main buffer to delay buffer
+		// calculate remaining contents
+		// copy remaining contents to beginning of delay buffer
 }
 
 //==============================================================================
