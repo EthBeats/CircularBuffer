@@ -136,15 +136,11 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    // cleanup garbage...
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-        
+	
+	// numSamples local variables
 	auto bufferSize = buffer.getNumSamples();
 	auto delayBufferSize = delayBuffer.getNumSamples();
 
@@ -152,32 +148,42 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     {
         auto* channelData = buffer.getWritePointer (channel);
         
-        // check if main buffer copies without needing to wrap
-        if (delayBufferSize > bufferSize + writePosition)
-        {
-			// copy main buffer to delay buffer
-			delayBuffer.copyFromWithRamp(channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
-		}
-		else
-		{
-			// determine how much space is left at the end of delay buffer
-			auto numSamplesToEnd = delayBufferSize - writePosition;
-			
-			// copy that amount from main buffer to delay buffer
-			delayBuffer.copyFromWithRamp(channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
-			
-			// calculate remaining contents
-			auto numSamplesAtStart = bufferSize - numSamplesToEnd;
-			
-			// copy remaining contents to beginning of delay buffer
-			delayBuffer.copyFromWithRamp(channel, 0, channelData, numSamplesAtStart, 0.1f, 0.1f);
-		}
-        
+        fillDelayBuffer (channel, bufferSize, delayBufferSize, channelData);
     }
+    
+    // console values for testing...
+//    DBG ("Delay Buffer Size: " << delayBufferSize);
+//    DBG ("Buffer Size: " << bufferSize);
+//    DBG ("Write Position: " << writePosition);
+    
     
 	// update write position and keep within bounds (wrap around)
 	writePosition += bufferSize;
 	writePosition %= delayBufferSize;
+}
+
+void CircularBufferAudioProcessor::fillDelayBuffer (int channel, int bufferSize, int delayBufferSize, float* channelData)
+{
+	// check if main buffer copies without needing to wrap
+	if (delayBufferSize > bufferSize + writePosition)
+	{
+		// copy main buffer to delay buffer
+		delayBuffer.copyFromWithRamp(channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
+	}
+	else
+	{
+		// determine how much space is left at the end of delay buffer
+		auto numSamplesToEnd = delayBufferSize - writePosition;
+			
+		// copy that amount from main buffer to delay buffer
+		delayBuffer.copyFromWithRamp(channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
+			
+		// calculate remaining contents
+		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
+			
+		// copy remaining contents to beginning of delay buffer
+		delayBuffer.copyFromWithRamp(channel, 0, channelData, numSamplesAtStart, 0.1f, 0.1f);
+	}
 }
 
 //==============================================================================
