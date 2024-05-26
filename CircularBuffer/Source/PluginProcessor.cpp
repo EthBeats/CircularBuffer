@@ -144,6 +144,9 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+        
+	auto bufferSize = buffer.getNumSamples();
+	auto delayBufferSize = delayBuffer.getNumSamples();
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
@@ -158,6 +161,10 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 		// copy that amount from main buffer to delay buffer
 		// calculate remaining contents
 		// copy remaining contents to beginning of delay buffer
+	
+	// update write position and keep within bounds (wrap around)
+	writePosition += bufferSize;
+	writePosition %= delayBufferSize;
 }
 
 //==============================================================================
