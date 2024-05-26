@@ -149,6 +149,7 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         auto* channelData = buffer.getWritePointer (channel);
         
         fillDelayBuffer (channel, bufferSize, delayBufferSize, channelData);
+        readFromDelayBuffer (channel, bufferSize, delayBufferSize, buffer);
     }
     
     // console values for testing...
@@ -168,7 +169,7 @@ void CircularBufferAudioProcessor::fillDelayBuffer (int channel, int bufferSize,
 	if (delayBufferSize > bufferSize + writePosition)
 	{
 		// copy main buffer to delay buffer
-		delayBuffer.copyFromWithRamp(channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
+		delayBuffer.copyFromWithRamp (channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
 	}
 	else
 	{
@@ -176,13 +177,46 @@ void CircularBufferAudioProcessor::fillDelayBuffer (int channel, int bufferSize,
 		auto numSamplesToEnd = delayBufferSize - writePosition;
 			
 		// copy that amount from main buffer to delay buffer
-		delayBuffer.copyFromWithRamp(channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
+		delayBuffer.copyFromWithRamp (channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
 			
 		// calculate remaining contents
 		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
 			
 		// copy remaining contents to beginning of delay buffer
-		delayBuffer.copyFromWithRamp(channel, 0, channelData, numSamplesAtStart, 0.1f, 0.1f);
+		delayBuffer.copyFromWithRamp (channel, 0, channelData + numSamplesToEnd, numSamplesAtStart, 0.1f, 0.1f);
+	}
+}
+
+void CircularBufferAudioProcessor::readFromDelayBuffer (int channel, int bufferSize, int delayBufferSize, juce::AudioBuffer<float>& buffer)
+{
+	// goes sampleRate into the past
+	auto readPosition = writePosition - getSampleRate();
+        
+	// check for negative index -> NO NO
+	if (readPosition < 0)
+	{
+		readPosition += delayBufferSize;
+	}
+		
+	// check if delayBuffer can be added to buffer without needing to wrap
+	if (delayBufferSize > bufferSize + readPosition)
+	{
+		// add delay buffer to main buffer
+		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), bufferSize, 0.7f, 0.7f);
+	}
+	else
+	{
+		// determine how much space is left at the end of delay buffer
+		auto numSamplesToEnd = delayBufferSize - readPosition;
+			
+		// add that amount from delay buffer to main buffer
+		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), numSamplesToEnd, 0.7f, 0.7f);
+			
+		// calculate remaining contents
+		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
+			
+		// add remaining contents to main buffer
+		buffer.addFromWithRamp (channel, numSamplesToEnd, delayBuffer.getReadPointer (channel, 0), numSamplesAtStart, 0.7f, 0.7f);
 	}
 }
 
