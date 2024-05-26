@@ -22,6 +22,7 @@ CircularBufferAudioProcessor::CircularBufferAudioProcessor()
                        )
 #endif
 {
+	this->writePosition = 0;
 }
 
 CircularBufferAudioProcessor::~CircularBufferAudioProcessor()
@@ -93,8 +94,8 @@ void CircularBufferAudioProcessor::changeProgramName (int index, const juce::Str
 //==============================================================================
 void CircularBufferAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+	auto delayBufferSize = sampleRate * 2.f;
+	delayBuffer.setSize(getTotalNumOutputChannels(), static_cast<int>(delayBufferSize));
 }
 
 void CircularBufferAudioProcessor::releaseResources()
@@ -189,3 +190,4 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new CircularBufferAudioProcessor();
 }
+
