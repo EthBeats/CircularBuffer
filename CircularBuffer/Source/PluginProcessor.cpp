@@ -19,14 +19,45 @@ CircularBufferAudioProcessor::CircularBufferAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), APVTS (*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
+	// Add listeners
+	APVTS.addParameterListener("delayms", this);
+	APVTS.addParameterListener("feedback", this);
+	
+	this->delayMs = 0.f;
+	this->feedback = 0.f;
 	this->writePosition = 0;
 }
 
 CircularBufferAudioProcessor::~CircularBufferAudioProcessor()
 {
+	// remove listeners
+	APVTS.removeParameterListener("delayms", this);
+	APVTS.removeParameterListener("feedback", this);
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout CircularBufferAudioProcessor::createParameterLayout()
+{
+	std::vector< std::unique_ptr<juce::RangedAudioParameter> > params;
+	
+	// ID, name... lower, upper, initial values
+	auto pDelayMs = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "delayms", 1 }, "Delay Ms", 0.f, 96000.f, 0.f);
+	auto pFeedback = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "feedback", 1 }, "Feedback", 0.f, 1.f, 0.0f);
+	
+	// move ownership of pointer to params
+	params.push_back(std::move(pDelayMs));
+	params.push_back(std::move(pFeedback));
+	
+	// constructs parameter layout using iterators (range constructor)
+	return { params.begin(), params.end() };
+}
+
+void CircularBufferAudioProcessor::parameterChanged (const juce::String &ParameterID, float newValue)
+{
+	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 //==============================================================================
@@ -94,8 +125,14 @@ void CircularBufferAudioProcessor::changeProgramName (int index, const juce::Str
 //==============================================================================
 void CircularBufferAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-	auto delayBufferSize = sampleRate * 2.f;
+	auto delayBufferSize = sampleRate * samplesPerBlock * 2.f;
 	delayBuffer.setSize(getTotalNumOutputChannels(), static_cast<int>(delayBufferSize));
+	
+	delayMs.reset (sampleRate, 0.05f);
+	feedback.reset (sampleRate, 0.05f);
+	
+	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 void CircularBufferAudioProcessor::releaseResources()
@@ -139,37 +176,30 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     // cleanup garbage...
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-	
-	// numSamples local variables
-	auto bufferSize = buffer.getNumSamples();
-	auto delayBufferSize = delayBuffer.getNumSamples();
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        // auto* channelData = buffer.getWritePointer (channel);
         
-        fillDelayBuffer (channel, bufferSize, delayBufferSize, channelData);
-        readFromDelayBuffer (channel, bufferSize, delayBufferSize, buffer);
+        fillDelayBuffer (buffer, channel);
+        readFromDelayBuffer (buffer, delayBuffer, channel);
+        fillDelayBuffer (buffer, channel);
     }
-    
-    // console values for testing...
-//    DBG ("Delay Buffer Size: " << delayBufferSize);
-//    DBG ("Buffer Size: " << bufferSize);
-//    DBG ("Write Position: " << writePosition);
-    
-    
-	// update write position and keep within bounds (wrap around)
-	writePosition += bufferSize;
-	writePosition %= delayBufferSize;
+
+    updateBufferPositions (buffer, delayBuffer);
 }
 
-void CircularBufferAudioProcessor::fillDelayBuffer (int channel, int bufferSize, int delayBufferSize, float* channelData)
+void CircularBufferAudioProcessor::fillDelayBuffer (juce::AudioBuffer<float>& buffer, int channel)
 {
+	// numSamples local variables
+	auto bufferSize = buffer.getNumSamples();
+	auto delayBufferSize = delayBuffer.getNumSamples();
+	
 	// check if main buffer copies without needing to wrap
 	if (delayBufferSize > bufferSize + writePosition)
 	{
 		// copy main buffer to delay buffer
-		delayBuffer.copyFromWithRamp (channel, writePosition, channelData, bufferSize, 0.1f, 0.1f);
+		delayBuffer.copyFrom (channel, writePosition, buffer.getWritePointer (channel), bufferSize);
 	}
 	else
 	{
@@ -177,20 +207,27 @@ void CircularBufferAudioProcessor::fillDelayBuffer (int channel, int bufferSize,
 		auto numSamplesToEnd = delayBufferSize - writePosition;
 			
 		// copy that amount from main buffer to delay buffer
-		delayBuffer.copyFromWithRamp (channel, writePosition, channelData, numSamplesToEnd, 0.1f, 0.1f);
+		delayBuffer.copyFrom (channel, writePosition, buffer.getWritePointer (channel), numSamplesToEnd);
 			
 		// calculate remaining contents
 		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
 			
 		// copy remaining contents to beginning of delay buffer
-		delayBuffer.copyFromWithRamp (channel, 0, channelData + numSamplesToEnd, numSamplesAtStart, 0.1f, 0.1f);
+		delayBuffer.copyFrom (channel, 0, buffer.getWritePointer (channel, numSamplesToEnd), numSamplesAtStart);
 	}
 }
 
-void CircularBufferAudioProcessor::readFromDelayBuffer (int channel, int bufferSize, int delayBufferSize, juce::AudioBuffer<float>& buffer)
+void CircularBufferAudioProcessor::readFromDelayBuffer (juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer, int channel)
 {
-	// goes sampleRate into the past
-	auto readPosition = writePosition - getSampleRate();
+	// numSamples local variables
+	auto bufferSize = buffer.getNumSamples();
+	auto delayBufferSize = delayBuffer.getNumSamples();
+	
+	// delayMs parameter
+	auto readPosition = writePosition - (delayMs.getNextValue());
+	
+	// feedback parameter
+	auto g = feedback.getNextValue();
         
 	// check for negative index -> NO NO
 	if (readPosition < 0)
@@ -202,7 +239,7 @@ void CircularBufferAudioProcessor::readFromDelayBuffer (int channel, int bufferS
 	if (delayBufferSize > bufferSize + readPosition)
 	{
 		// add delay buffer to main buffer
-		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), bufferSize, 0.7f, 0.7f);
+		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), bufferSize, g, g);
 	}
 	else
 	{
@@ -210,14 +247,25 @@ void CircularBufferAudioProcessor::readFromDelayBuffer (int channel, int bufferS
 		auto numSamplesToEnd = delayBufferSize - readPosition;
 			
 		// add that amount from delay buffer to main buffer
-		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), numSamplesToEnd, 0.7f, 0.7f);
+		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), numSamplesToEnd, g, g);
 			
 		// calculate remaining contents
 		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
 			
 		// add remaining contents to main buffer
-		buffer.addFromWithRamp (channel, numSamplesToEnd, delayBuffer.getReadPointer (channel, 0), numSamplesAtStart, 0.7f, 0.7f);
+		buffer.addFromWithRamp (channel, numSamplesToEnd, delayBuffer.getReadPointer (channel, 0), numSamplesAtStart, g, g);
 	}
+}
+
+void CircularBufferAudioProcessor::updateBufferPositions (juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer)
+{
+	// numSamples local variables
+	auto bufferSize = buffer.getNumSamples();
+	auto delayBufferSize = delayBuffer.getNumSamples();
+	
+	// advance and keep write position inbounds
+	writePosition += bufferSize;
+	writePosition %= delayBufferSize;
 }
 
 //==============================================================================
@@ -228,21 +276,29 @@ bool CircularBufferAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* CircularBufferAudioProcessor::createEditor()
 {
-    return new CircularBufferAudioProcessorEditor (*this);
+    // return new CircularBufferAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 //==============================================================================
 void CircularBufferAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    // save params
+   juce::MemoryOutputStream stream(destData, false);
+   APVTS.state.writeToStream(stream);
 }
 
 void CircularBufferAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    // load params
+   auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+   
+   jassert(tree.isValid());
+   
+   APVTS.state = tree;
+   
+   delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+   feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 //==============================================================================

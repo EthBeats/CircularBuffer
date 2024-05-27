@@ -13,7 +13,7 @@
 //==============================================================================
 /**
 */
-class CircularBufferAudioProcessor  : public juce::AudioProcessor
+class CircularBufferAudioProcessor  : public juce::AudioProcessor, juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -52,10 +52,23 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    
+    // APVTS =======================================================================
+    juce::AudioProcessorValueTreeState APVTS;
 
 private:
-	void fillDelayBuffer (int channel, int bufferSize, int delayBufferSize, float* channelData);
-	void readFromDelayBuffer (int channel, int bufferSize, int delayBufferSize, juce::AudioBuffer<float>& buffer);
+	// Parameter Layout ============================================================
+	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+	void parameterChanged (const juce::String &ParameterID, float newValue) override;
+	
+	// Linear Smooth ===============================================================
+	juce::LinearSmoothedValue<float> delayMs;
+	juce::LinearSmoothedValue<float> feedback;
+
+	// Delay Functions =============================================================
+	void fillDelayBuffer (juce::AudioBuffer<float>& buffer, int channel);
+	void readFromDelayBuffer (juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer, int channel);
+	void updateBufferPositions (juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer);
 
 	juce::AudioBuffer<float> delayBuffer;
 	int writePosition;
