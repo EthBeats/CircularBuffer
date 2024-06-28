@@ -66,7 +66,7 @@ private:
 	void updateBufferPositions (juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer);
 
 	juce::AudioBuffer<float> delayBuffer;
-	int writePosition;
+	int writePosition = 0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CircularBufferAudioProcessor)

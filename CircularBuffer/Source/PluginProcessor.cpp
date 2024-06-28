@@ -19,45 +19,15 @@ CircularBufferAudioProcessor::CircularBufferAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       ), APVTS (*this, nullptr, "PARAMETERS", createParameterLayout())
+                       ), params(apvts)
 #endif
 {
-	// Add listeners
-	APVTS.addParameterListener("delayms", this);
-	APVTS.addParameterListener("feedback", this);
-	
-	this->delayMs = 0.f;
-	this->feedback = 0.f;
-	this->writePosition = 0;
+
 }
 
 CircularBufferAudioProcessor::~CircularBufferAudioProcessor()
 {
-	// remove listeners
-	APVTS.removeParameterListener("delayms", this);
-	APVTS.removeParameterListener("feedback", this);
-}
 
-juce::AudioProcessorValueTreeState::ParameterLayout CircularBufferAudioProcessor::createParameterLayout()
-{
-	std::vector< std::unique_ptr<juce::RangedAudioParameter> > params;
-	
-	// ID, name... lower, upper, initial values
-	auto pDelayMs = std::make_unique<juce::AudioParameterInt>(juce::ParameterID { "delayms", 1 }, "Delay Ms", 0, 96000, 0);
-	auto pFeedback = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "feedback", 1 }, "Feedback", 0.f, 1.f, 0.0f);
-	
-	// move ownership of pointer to params
-	params.push_back(std::move(pDelayMs));
-	params.push_back(std::move(pFeedback));
-	
-	// constructs parameter layout using iterators (range constructor)
-	return { params.begin(), params.end() };
-}
-
-void CircularBufferAudioProcessor::parameterChanged (const juce::String &ParameterID, float newValue)
-{
-	//delayMs.setCurrentAndTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-	//feedback.setCurrentAndTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 //==============================================================================
@@ -128,11 +98,8 @@ void CircularBufferAudioProcessor::prepareToPlay (double sampleRate, int samples
 	auto delayBufferSize = sampleRate * samplesPerBlock * 2.f;
 	delayBuffer.setSize(getTotalNumOutputChannels(), static_cast<int>(delayBufferSize));
 	
-	delayMs.reset (sampleRate, 0.05f);
-	feedback.reset (sampleRate, 0.05f);
-	
-	delayMs.setCurrentAndTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-	feedback.setCurrentAndTargetValue (APVTS.getRawParameterValue ("feedback")->load());
+	params.prepareToPlay(sampleRate);
+	params.reset();
 }
 
 void CircularBufferAudioProcessor::releaseResources()
@@ -177,8 +144,7 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
         
-	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
+	params.update();
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
@@ -226,11 +192,13 @@ void CircularBufferAudioProcessor::readFromDelayBuffer (juce::AudioBuffer<float>
 	auto bufferSize = buffer.getNumSamples();
 	auto delayBufferSize = delayBuffer.getNumSamples();
 	
+	params.smoothen();
+	
 	// delayMs parameter
-	auto readPosition = writePosition - (delayMs.getNextValue());
+	auto readPosition = writePosition - (params.time);
 	
 	// feedback parameter
-	auto g = feedback.getNextValue();
+	auto g = params.feedback;
         
 	// check for negative index -> NO NO
 	if (readPosition < 0)
@@ -289,23 +257,27 @@ juce::AudioProcessorEditor* CircularBufferAudioProcessor::createEditor()
 //==============================================================================
 void CircularBufferAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // save params
-   juce::MemoryOutputStream stream(destData, false);
-   APVTS.state.writeToStream(stream);
+    // You should use this method to store your parameters in the memory block.
+    // You could do that either as raw data, or use the XML or ValueTree classes
+    // as intermediaries to make it easy to save and load complex data.
+    
+    copyXmlToBinary(*apvts.copyState().createXml(), destData);
+    
+    // DBG(apvts.copyState().toXmlString());
 }
 
 void CircularBufferAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // load params
-   auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
-   
-   jassert(tree.isValid());
-   
-   APVTS.state = tree;
-   
-   delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-   feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
+    // You should use this method to restore your parameters from this memory block,
+    // whose contents will have been created by the getStateInformation() call.
+    
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    
+    if (xml.get() != nullptr && xml->hasTagName(apvts.state.getType())) {
+		apvts.replaceState(juce::ValueTree::fromXml(*xml));
+	}
 }
+
 
 //==============================================================================
 // This creates new instances of the plugin..
