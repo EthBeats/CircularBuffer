@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="EthBeats">
   <MAINGROUP id="moglfJ" name="CircularBuffer">
     <GROUP id="{D634F0C7-2E6F-9F2A-F0E7-E343851368EE}" name="Source">
+      <FILE id="ozuBck" name="Parameters.cpp" compile="1" resource="0" file="Source/Parameters.cpp"/>
+      <FILE id="Szg1AU" name="Parameters.h" compile="0" resource="0" file="Source/Parameters.h"/>
       <FILE id="T4GdKJ" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="Sk3g5D" name="PluginProcessor.h" compile="0" resource="0"

@@ -9,11 +9,12 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Parameters.h"
 
 //==============================================================================
 /**
 */
-class CircularBufferAudioProcessor  : public juce::AudioProcessor, juce::AudioProcessorValueTreeState::Listener
+class CircularBufferAudioProcessor  : public juce::AudioProcessor
 {
 public:
     //==============================================================================
@@ -52,18 +53,12 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    
-    // APVTS =======================================================================
-    juce::AudioProcessorValueTreeState APVTS;
 
 private:
 	// Parameter Layout ============================================================
-	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-	void parameterChanged (const juce::String &ParameterID, float newValue) override;
+	juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", Parameters::createParameterLayout() };
 	
-	// Linear Smooth ===============================================================
-	juce::LinearSmoothedValue<float> delayMs;
-	juce::LinearSmoothedValue<float> feedback;
+	Parameters params;
 
 	// Delay Functions =============================================================
 	void fillDelayBuffer (juce::AudioBuffer<float>& buffer, int channel);

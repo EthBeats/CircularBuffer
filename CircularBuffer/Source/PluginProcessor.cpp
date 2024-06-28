@@ -43,7 +43,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout CircularBufferAudioProcessor
 	std::vector< std::unique_ptr<juce::RangedAudioParameter> > params;
 	
 	// ID, name... lower, upper, initial values
-	auto pDelayMs = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "delayms", 1 }, "Delay Ms", 0.f, 96000.f, 0.f);
+	auto pDelayMs = std::make_unique<juce::AudioParameterInt>(juce::ParameterID { "delayms", 1 }, "Delay Ms", 0, 96000, 0);
 	auto pFeedback = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "feedback", 1 }, "Feedback", 0.f, 1.f, 0.0f);
 	
 	// move ownership of pointer to params
@@ -56,8 +56,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout CircularBufferAudioProcessor
 
 void CircularBufferAudioProcessor::parameterChanged (const juce::String &ParameterID, float newValue)
 {
-	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
+	//delayMs.setCurrentAndTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+	//feedback.setCurrentAndTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 //==============================================================================
@@ -131,8 +131,8 @@ void CircularBufferAudioProcessor::prepareToPlay (double sampleRate, int samples
 	delayMs.reset (sampleRate, 0.05f);
 	feedback.reset (sampleRate, 0.05f);
 	
-	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
-	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
+	delayMs.setCurrentAndTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+	feedback.setCurrentAndTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 }
 
 void CircularBufferAudioProcessor::releaseResources()
@@ -176,6 +176,9 @@ void CircularBufferAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     // cleanup garbage...
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+        
+	delayMs.setTargetValue (APVTS.getRawParameterValue ("delayms")->load());
+	feedback.setTargetValue (APVTS.getRawParameterValue ("feedback")->load());
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
@@ -240,6 +243,7 @@ void CircularBufferAudioProcessor::readFromDelayBuffer (juce::AudioBuffer<float>
 	{
 		// add delay buffer to main buffer
 		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), bufferSize, g, g);
+		buffer.applyGainRamp(channel, 0, bufferSize, 0.7f, 0.7f);
 	}
 	else
 	{
@@ -248,12 +252,14 @@ void CircularBufferAudioProcessor::readFromDelayBuffer (juce::AudioBuffer<float>
 			
 		// add that amount from delay buffer to main buffer
 		buffer.addFromWithRamp (channel, 0, delayBuffer.getReadPointer (channel, readPosition), numSamplesToEnd, g, g);
+		buffer.applyGainRamp(channel, 0, numSamplesToEnd, 0.7f, 0.7f);
 			
 		// calculate remaining contents
 		auto numSamplesAtStart = bufferSize - numSamplesToEnd;
 			
 		// add remaining contents to main buffer
 		buffer.addFromWithRamp (channel, numSamplesToEnd, delayBuffer.getReadPointer (channel, 0), numSamplesAtStart, g, g);
+		buffer.applyGainRamp(channel, numSamplesToEnd, numSamplesAtStart, 0.7f, 0.7f);
 	}
 }
 

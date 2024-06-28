@@ -61,28 +61,11 @@
       </OUTPUTS>
     </LAYOUT>
   </FILTER>
-  <FILTER uid="14" x="0.4975" y="0.5365384615384615" useARA="0" uiLastX_Normal="349"
-          uiLastY_Normal="-721" uiopen_Normal="1">
-    <PLUGIN name="CircularBuffer" format="VST3" category="Fx" manufacturer="EthBeats"
-            version="1.0.0" file="/Users/ethan/Library/Audio/Plug-Ins/VST3/CircularBuffer.vst3"
-            uniqueId="f3a5db29" isInstrument="0" fileTime="18fb6295734" infoUpdateTime="18fb63023a4"
-            numInputs="2" numOutputs="2" isShell="0" hasARAExtension="0"
-            uid="acf5a847"/>
-    <STATE>191.VMjLgXK....O+fWarAhckI2bo8la8HRLt.iHfTlai8FYo41Y8HRUTYTK3HxO9.BOVMEUy.Ea0cVZtMEcgQWY9vSRC8Vav8lak4Fc9XCLt3hKt3hKt3hKt3hYRUUSTEETIckVwTjQisVTTgkdEYjKAQjYPQSPWgUdMcjKAQjct3hdA4hKt3hKt3hKtnTUv.UQAslXuk0UXoWUFE0YQcEV77RRC8Vav8lak4Fc9vyKVMEUy.Ea0cVZtMEcgQWY9..</STATE>
-    <LAYOUT>
-      <INPUTS>
-        <BUS index="0" layout="L R"/>
-      </INPUTS>
-      <OUTPUTS>
-        <BUS index="0" layout="L R"/>
-      </OUTPUTS>
-    </LAYOUT>
-  </FILTER>
   <FILTER uid="15" x="0.49875" y="0.3038461538461538" useARA="0" uiLastX_Normal="822"
           uiLastY_Normal="44" uiopen_Normal="1">
     <PLUGIN name="AUAudioFilePlayer" format="AudioUnit" category="Generator"
             manufacturer="Apple" version="1.6.0" file="AudioUnit:Generators/augn,afpl,appl"
-            uniqueId="6163676e" isInstrument="0" fileTime="0" infoUpdateTime="18fb63023a4"
+            uniqueId="6163676e" isInstrument="0" fileTime="0" infoUpdateTime="19060c7b7a8"
             numInputs="0" numOutputs="2" isShell="0" hasARAExtension="0"
             uid="6163676e"/>
     <STATE>586.hAGaoMGcv.C1AHv.DTfAGfPBJr.Gc3wGgvUag4VclE1XzUmbkIGUjEFcg8EDarVPUAkbkMWYzAUYxMWZyQWYtQ2TzEFcksTY4c0b0IFc4AWYWYWYxMWZu4FUzkGbk8EDOXVZrUVKxUlYkIWYtMVYyQkag0VYRDFbvwFPgxvzM3vCPDQFXYTZrUlSg0VYWIUYmk1atMmWIM2TkwVYiQWYjYTZrU1WPv0KUMWYxM2KkQGZg41KLklXxElb48RSuIVZrUFHD81X00VYtQ2buL1as4WXvAGak42Pr8VcjQzaiM2KL81YoMFHPI2aff0KB8VctMVYy8RUtQWZzwVYjAhLtzFbyDpDTOAEUXwEXjgFdIUYmk1atQzakMGSu8FbZIUYmk1atQTXzE1WP.QRyMUYrU1XzUFYRU1Yo8laZIUYmk1at4TXsUFBOAAb...........nSXV...F...5DlE..fA...vAeA..X....HVBGa+G..vH.onQrhNEr.vAeA..X..P.................................................................VvB......jfVNU1cfHUYmk1atkfDgYFbrAA.RDVcm4Vzf.gUFkFakARLXUkazkFcrUFY.f..Y.fI.rB.IAPT.jE.dA.b.TG.5Avd.zG.DBPi.TI.jFv.ATP.NDPGAfR.6DfQAbT.5FvtAXb.GG.yA3b.SGf0AzM.......f.A.........fH..................P.lC</STATE>
@@ -93,8 +76,25 @@
       </OUTPUTS>
     </LAYOUT>
   </FILTER>
-  <CONNECTION srcFilter="14" srcChannel="0" dstFilter="12" dstChannel="0"/>
-  <CONNECTION srcFilter="14" srcChannel="1" dstFilter="12" dstChannel="1"/>
-  <CONNECTION srcFilter="15" srcChannel="0" dstFilter="14" dstChannel="0"/>
-  <CONNECTION srcFilter="15" srcChannel="1" dstFilter="14" dstChannel="1"/>
+  <FILTER uid="16" x="0.495" y="0.5711538461538461" useARA="0" uiLastX_Normal="819"
+          uiLastY_Normal="448" uiopen_Normal="1">
+    <PLUGIN name="CircularBuffer" format="VST3" category="Fx" manufacturer="EthBeats"
+            version="1.0.0" file="/Users/ethan/Library/Audio/Plug-Ins/VST3/CircularBuffer.vst3"
+            uniqueId="f3a5db29" isInstrument="0" fileTime="18fb6295734" infoUpdateTime="19060c7b7a8"
+            numInputs="2" numOutputs="2" isShell="0" hasARAExtension="0"
+            uid="acf5a847"/>
+    <STATE>319.VMjLgXS....O+fWarAhckI2bo8la8HRLt.iHfTlai8FYo41Y8HRUTYTK3HxO9.BOVMEUy.Ea0cVZtMEcgQWY9vSRC8Vav8lak4Fc9DSM03BTEoFUAACUQQUUpQ0TA4hKAgjKTETRUAUSAAkKBolQY4BQPITQPYUVxUjUjMWSG4RLEYTXvTkQtDjZtDjKt3hKt3hKt3hKt3BTEoFUAACQtDDRPokZAAkKJQkYYsVUFkEZEECVwEjYic1cVM1ZAAkKIAkKt3hKt3hKt3hKt3hKt3hKt3hKt3hKt3FUUMTUDQEdqw1XmE0UYQTQFM1YAAkKAgDUjYWQwHVdAAkKAwjKtLlKt3hKt3hKt3hYRUUSTEETIckVwTjQisVTTgkdEYDOujzPu0Fbu4VYtQmO77hUSQ0LPwVcmklaSQWXzUlO..</STATE>
+    <LAYOUT>
+      <INPUTS>
+        <BUS index="0" layout="L R"/>
+      </INPUTS>
+      <OUTPUTS>
+        <BUS index="0" layout="L R"/>
+      </OUTPUTS>
+    </LAYOUT>
+  </FILTER>
+  <CONNECTION srcFilter="15" srcChannel="0" dstFilter="16" dstChannel="0"/>
+  <CONNECTION srcFilter="15" srcChannel="1" dstFilter="16" dstChannel="1"/>
+  <CONNECTION srcFilter="16" srcChannel="0" dstFilter="12" dstChannel="0"/>
+  <CONNECTION srcFilter="16" srcChannel="1" dstFilter="12" dstChannel="1"/>
 </FILTERGRAPH>
